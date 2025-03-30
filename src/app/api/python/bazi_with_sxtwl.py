@@ -6,6 +6,22 @@ import sxtwl
 TIANGAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
 DIZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 
+# 生肖对应
+SHENGXIAO = {
+    "子": "鼠",
+    "丑": "牛",
+    "寅": "虎",
+    "卯": "兔",
+    "辰": "龙",
+    "巳": "蛇",
+    "午": "马",
+    "未": "羊",
+    "申": "猴",
+    "酉": "鸡",
+    "戌": "狗",
+    "亥": "猪"
+}
+
 # 五行属性
 WUXING = ["木", "火", "土", "金", "水"]
 
@@ -234,6 +250,10 @@ def get_shen_sha(year_gz, month_gz, day_gz, hour_gz):
     
     return result
 
+def get_shengxiao(dizhi_index):
+    """根据地支索引获取对应的生肖"""
+    return SHENGXIAO[DIZHI[dizhi_index]]
+
 def calculate_bazi(dt: datetime.datetime, longitude: float) -> Dict[str, str]:
     """使用sxtwl库计算八字"""
     
@@ -354,6 +374,7 @@ def calculate_bazi(dt: datetime.datetime, longitude: float) -> Dict[str, str]:
             "leap": day.isLunarLeap()
         },
         "zodiac": DIZHI[(day.getLunarYear() - 4) % 12],
+        "zodiacCN": get_shengxiao((day.getLunarYear() - 4) % 12),
         "真太阳时": true_dt.strftime("%Y-%m-%d %H:%M"),
         "时支": shichen
     }

@@ -1,73 +1,28 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FcGoogle } from 'react-icons/fc';
 
-// Component using useSearchParams
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Get error information from URL
-  useEffect(() => {
-    const errorType = searchParams.get('error');
-    if (errorType) {
-      const errorMessages: {[key: string]: string} = {
-        'OAuthSignin': 'Failed to connect to Google services. Please check your network.',
-        'OAuthCallback': 'Failed to get user information from Google. Please check your network.',
-        'no_code': 'Failed to get authorization code',
-        'auth_failed': 'Authentication failed. Please try again.',
-        'callback_error': 'An error occurred during the authentication process'
-      };
-      
-      setError(errorMessages[errorType] || 'An error occurred during login');
-    }
-  }, [searchParams]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  // If user is logged in, redirect to home page
-  useEffect(() => {
-    if (status === 'authenticated' && session) {
-      router.push('/');
-    }
-  }, [session, status, router]);
-
-  // Standard Google login with NextAuth
-  const handleGoogleLogin = async () => {
+  // 简单的表单提交处理
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
-    try {
-      await signIn('google', { 
-        callbackUrl: '/',
-        redirect: true,
-      });
-    } catch (err) {
-      console.error('NextAuth login error:', err);
-      setError('An error occurred during login. Please try again later.');
-    } finally {
+    setError('');
+    
+    // 这里只是一个演示，实际上不会进行真正的登录
+    setTimeout(() => {
       setLoading(false);
-    }
+      router.push('/');
+    }, 1000);
   };
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-ink-light dark:bg-ink-dark py-12 relative ink-wash-bg">
-        <div className="ink-splash ink-splash-1"></div>
-        <div className="ink-splash ink-splash-2"></div>
-        <div className="ink-splash ink-splash-3"></div>
-        <div className="max-w-md w-full p-8 relative z-10">
-          <div className="text-center mb-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-earth mx-auto"></div>
-            <p className="mt-4 text-earth dark:text-earth">Loading...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-ink-light dark:bg-ink-dark py-12 relative ink-wash-bg">
@@ -80,9 +35,9 @@ function LoginContent() {
       <div className="max-w-md w-full p-8 relative z-10 ink-card">
         <div className="text-center mb-8">
           <div className="bagua-symbol mx-auto"></div>
-          <h1 className="text-3xl font-bold text-earth dark:text-earth mt-4 ink-text">Login</h1>
+          <h1 className="text-3xl font-bold text-earth dark:text-earth mt-4 ink-text">登录</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Login to access personalized destiny analysis and more features
+            登录以访问个性化命运分析
           </p>
         </div>
         
@@ -92,58 +47,55 @@ function LoginContent() {
           </div>
         )}
         
-        <div className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              邮箱
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-earth focus:border-transparent"
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              密码
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-earth focus:border-transparent"
+              required
+            />
+          </div>
+          
           <button
-            onClick={handleGoogleLogin}
+            type="submit"
             disabled={loading}
-            className="flex items-center justify-center w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-ink-dark hover:bg-gray-50 dark:hover:bg-ink-dark/80 transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-earth hover:bg-earth/80 text-white font-medium rounded-md transition-all duration-200 shadow-sm disabled:opacity-50"
           >
             {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-700 dark:border-gray-300 mr-2"></div>
+              <>
+                <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div>
+                <span>登录中...</span>
+              </>
             ) : (
-              <FcGoogle className="w-5 h-5 mr-2" />
+              <span>登录</span>
             )}
-            Sign in with Google
           </button>
           
-          <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-fire hover:underline">
-                Register Now
-              </Link>
-            </p>
+          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+            暂未注册？ <Link href="/register" className="text-earth hover:underline">创建账户</Link>
           </div>
-        </div>
+        </form>
       </div>
     </div>
-  );
-}
-
-// Loading fallback UI
-function LoadingLogin() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-ink-light dark:bg-ink-dark py-12 relative ink-wash-bg">
-      <div className="ink-splash ink-splash-1"></div>
-      <div className="ink-splash ink-splash-2"></div>
-      <div className="ink-splash ink-splash-3"></div>
-      <div className="max-w-md w-full p-8 relative z-10">
-        <div className="text-center mb-8">
-          <div className="bagua-symbol mx-auto"></div>
-          <h1 className="text-3xl font-bold text-earth dark:text-earth mt-4 ink-text">Login</h1>
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-earth mx-auto mt-6"></div>
-          <p className="mt-4 text-earth dark:text-earth">Loading login options...</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Main page component wrapped with Suspense
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<LoadingLogin />}>
-      <LoginContent />
-    </Suspense>
   );
 } 

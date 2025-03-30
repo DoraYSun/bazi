@@ -14,6 +14,17 @@ const nextConfig: NextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  env: {
+    PROXY_URL: 'http://127.0.0.1:7890',
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/auth/:path*',
+        destination: '/api/auth/:path*',
+      }
+    ];
+  },
 };
 
 export default nextConfig;

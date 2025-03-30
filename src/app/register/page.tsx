@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FcGoogle } from 'react-icons/fc';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
 
   // 如果用户已登录，重定向到主页
   useEffect(() => {
@@ -19,10 +21,14 @@ export default function RegisterPage() {
     }
   }, [session, status, router]);
 
-  const handleGoogleRegister = async () => {
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/' });
+      // 这里应该添加注册处理逻辑
+      // 现在只是示例，直接跳转到登录页面
+      alert('注册功能尚未实现，请使用管理员账号登录: admin/password');
+      router.push('/login');
     } catch (err) {
       console.error('注册错误:', err);
       setError('注册过程中发生错误，请稍后再试');
@@ -70,18 +76,61 @@ export default function RegisterPage() {
           </div>
         )}
         
-        <div className="space-y-6">
+        <form onSubmit={handleRegister} className="space-y-6">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              用户名
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-earth focus:border-earth dark:bg-ink-dark/50"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              电子邮箱
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-earth focus:border-earth dark:bg-ink-dark/50"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              密码
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-earth focus:border-earth dark:bg-ink-dark/50"
+            />
+          </div>
+          
           <button
-            onClick={handleGoogleRegister}
+            type="submit"
             disabled={loading}
-            className="flex items-center justify-center w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-ink-dark hover:bg-gray-50 dark:hover:bg-ink-dark/80 transition-colors"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-earth hover:bg-earth/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-earth"
           >
             {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-700 dark:border-gray-300 mr-2"></div>
-            ) : (
-              <FcGoogle className="w-5 h-5 mr-2" />
-            )}
-            使用谷歌账号注册
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+            ) : null}
+            注册
           </button>
           
           <div className="text-center">
@@ -92,7 +141,7 @@ export default function RegisterPage() {
               </Link>
             </p>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -84,6 +84,9 @@ export interface SxtwlBaziChart {
   // 属相
   zodiac: string;
   
+  // 中文生肖
+  zodiacCN?: string;
+  
   // 其他信息
   真太阳时: string;
   时支: string;

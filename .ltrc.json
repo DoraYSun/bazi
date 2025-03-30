@@ -1,0 +1,8 @@
+{
+  "port": 3000,
+  "subdomain": "two-hornets-sin",
+  "host": "https://loca.lt",
+  "local-host": "localhost",
+  "open": false,
+  "print-requests": true
+} 

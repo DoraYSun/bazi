@@ -3,6 +3,8 @@
  * 用于调用 DeepSeek API 进行八字排盘和命理分析
  */
 
+import { SxtwlBaziChart } from './sxtwlApi';
+
 // 八字排盘结果类型
 export interface BaziChart {
   yearPillar: string;
@@ -71,7 +73,7 @@ export interface BaziChart {
 }
 
 // 分析类型
-export type AnalysisType = 'overall' | 'age25' | 'career' | 'marriage' | 'wealth' | 'health';
+export type AnalysisType = 'overall' | 'age25' | 'career' | 'marriage' | 'wealth' | 'health' | 'fortune';
 
 // 用户数据类型
 export interface UserData {
@@ -232,4 +234,37 @@ export async function doBaziAnalysis(baziChart: BaziChart, analysisType: Analysi
     console.error('命理分析失败:', error);
     throw new Error(`命理分析失败: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+/**
+ * 将SXTWL八字结果转换为DeepSeek API需要的格式
+ * @param sxtwlBaziChart SXTWL八字排盘结果
+ * @returns DeepSeek API所需的BaziChart格式
+ */
+export function convertToBaziChart(sxtwlBaziChart: SxtwlBaziChart): BaziChart {
+  return {
+    // 基本四柱
+    yearPillar: sxtwlBaziChart.年柱 || `${sxtwlBaziChart.tianGan.year}${sxtwlBaziChart.diZhi.year}`,
+    monthPillar: sxtwlBaziChart.月柱 || `${sxtwlBaziChart.tianGan.month}${sxtwlBaziChart.diZhi.month}`,
+    dayPillar: sxtwlBaziChart.日柱 || `${sxtwlBaziChart.tianGan.day}${sxtwlBaziChart.diZhi.day}`,
+    hourPillar: sxtwlBaziChart.时柱 || `${sxtwlBaziChart.tianGan.hour}${sxtwlBaziChart.diZhi.hour}`,
+    
+    // 空的分析字段
+    analysis: '',
+    
+    // 复制其他相同字段
+    ganShen: sxtwlBaziChart.ganShen,
+    tianGan: sxtwlBaziChart.tianGan,
+    diZhi: sxtwlBaziChart.diZhi,
+    cangGan: sxtwlBaziChart.cangGan,
+    zhiShen: sxtwlBaziChart.zhiShen,
+    naYin: sxtwlBaziChart.naYin,
+    shenSha: sxtwlBaziChart.shenSha,
+    relations: sxtwlBaziChart.relations,
+    lunarDate: sxtwlBaziChart.lunarDate,
+    zodiac: sxtwlBaziChart.zodiac,
+    
+    // 提供空的推荐名称字段
+    recommendedNames: []
+  };
 } 

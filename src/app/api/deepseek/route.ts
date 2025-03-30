@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // 允许的分析类型
-const ALLOWED_TYPES = ['overall', 'age25', 'career', 'marriage', 'wealth', 'health'];
+const ALLOWED_TYPES = ['overall', 'age25', 'career', 'marriage', 'wealth', 'health', 'fortune'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
     const { action, data } = body;
 
     // 获取环境变量
-    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://vip.apiyi.com/v1/chat/completions';
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions';
     const apiKey = process.env.DEEPSEEK_API_KEY;
-    const model = process.env.DEEPSEEK_MODEL || 'deepseek-v3';
+    const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
     // 添加调试日志
     console.log('DeepSeek API 配置:', {
@@ -157,22 +157,25 @@ export async function POST(request: NextRequest) {
       
       switch (analysisType) {
         case 'overall':
-          prompt += '请提供详细的命理整体分析，包括性格特点、人生起伏、吉凶运势等。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1500字。';
+          prompt += '请提供详细的命理整体分析，包括性格特点、人生起伏、吉凶运势等。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1500字。';
           break;
         case 'age25':
-          prompt += '请专门针对25岁这一年的运势进行详细分析，包括事业、健康、感情等各方面运势。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1200字。';
+          prompt += '请专门针对25岁这一年的运势进行详细分析，包括事业、健康、感情等各方面运势。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1200字。';
+          break;
+        case 'fortune':
+          prompt += '请提供未来10年的运势分析，重点分析大运和流年对运势的影响，包括事业、健康、感情等各方面运势的变化趋势。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1500字。';
           break;
         case 'career':
-          prompt += '请详细分析事业运势，包括适合的职业方向、事业发展机遇与挑战、升迁机会、创业建议等。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1200字。';
+          prompt += '请详细分析事业运势，包括适合的职业方向、事业发展机遇与挑战、升迁机会、创业建议等。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1200字。';
           break;
         case 'marriage':
-          prompt += '请详细分析婚姻与感情运势，包括感情特点、桃花运、婚姻质量、适合的伴侣类型等。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1200字。';
+          prompt += '请详细分析婚姻与感情运势，包括感情特点、桃花运、婚姻质量、适合的伴侣类型等。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1200字。';
           break;
         case 'wealth':
-          prompt += '请详细分析财运情况，包括财富来源、理财建议、投资机会、破财风险等。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1200字。';
+          prompt += '请详细分析财运情况，包括财富来源、理财建议、投资机会、破财风险等。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1200字。';
           break;
         case 'health':
-          prompt += '请详细分析健康状况，包括体质特点、易患疾病、养生建议等。请用英文回答，但关键的命理学术语要加上中文，例如：Wood (木)，Fire (火)，Earth (土)，Metal (金)，Water (水)，Day Master (日主)等。答案不少于1200字。';
+          prompt += '请详细分析健康状况，包括体质特点、易患疾病、养生建议等。请用纯英文回答，不要使用中文术语或添加括号注解。请不要使用任何Markdown格式，如#号标题、星号(*)加粗或斜体、列表符号等，直接以纯文本段落形式输出。避免使用"**Bold**"或"###"等markdown语法。每个段落直接使用换行分隔，不要使用标题或分隔线。答案不少于1200字。';
           break;
       }
       

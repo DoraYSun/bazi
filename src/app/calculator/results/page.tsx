@@ -15,35 +15,437 @@ import {
   formatZodiac,
   zodiacTranslations
 } from '@/utils/formatBaziContent';
+import { doBaziAnalysis, convertToBaziChart, AnalysisType } from '@/utils/deepseekApi';
 
 // Define tab types
 type TabType = 'basic' | 'personality' | 'overview' | 'fortune' | 'career' | 'love' | 'wealth';
+
+// Format personality report text - Enhanced version
+const formatReportText = (text: string) => {
+  // Clean any potential markdown before processing
+  // Remove markdown headers (###)
+  let processedText = text.replace(/^###\s*(.+?)$/gm, '$1');
+  
+  // Remove other markdown headers (## and #)
+  processedText = processedText.replace(/^##\s*(.+?)$/gm, '$1');
+  processedText = processedText.replace(/^#\s*(.+?)$/gm, '$1');
+  
+  // Clean bold and italic markdown
+  processedText = processedText.replace(/\*\*(.+?)\*\*/g, '$1');
+  processedText = processedText.replace(/\*([^*]+)\*/g, '$1');
+  
+  // Now apply our own styling
+  
+  // Check if paragraph is a potential section header by length and content
+  if (processedText.length < 60 && 
+     (processedText.includes('Personality') || 
+      processedText.includes('Character') || 
+      processedText.includes('Career') || 
+      processedText.includes('Relationship') || 
+      processedText.includes('Health') || 
+      processedText.includes('Wealth') || 
+      processedText.includes('Life') || 
+      processedText.includes('Fortune') || 
+      processedText.includes('Analysis') || 
+      processedText.includes('Recommendation'))) {
+    return `<h4 class="text-lg font-medium text-amber-700 dark:text-amber-400 mt-6 mb-3">${processedText}</h4>`;
+  }
+  
+  // Check if it's a subsection (usually contains ":")
+  if (processedText.includes(':')) {
+    const parts = processedText.split(':');
+    if (parts[0].length < 50) {
+      return `<div class="mb-2">
+        <span class="font-semibold text-amber-600 dark:text-amber-400">${parts[0]}:</span>
+        <span>${parts.slice(1).join(':')}</span>
+      </div>`;
+    }
+  }
+  
+  // Process parenthetical remarks for emphasis
+  processedText = processedText.replace(/\(([^)]+)\)/g, '<span class="text-blue-600 dark:text-blue-400">($1)</span>');
+  
+  // Highlight key terms
+  const keyTerms = [
+    'Day Master', 'Wood', 'Fire', 'Earth', 'Metal', 'Water',
+    'Yin', 'Yang', 'Heavenly Stem', 'Earthly Branch',
+    'Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat', 'Monkey', 'Rooster', 'Dog', 'Pig'
+  ];
+  
+  keyTerms.forEach(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'g');
+    processedText = processedText.replace(regex, `<span class="text-amber-600 dark:text-amber-400">${term}</span>`);
+  });
+  
+  return `<p class="mb-4">${processedText}</p>`;
+};
+
+// Intelligently split text into sections, adding visual elements
+const renderPersonalityReport = (reportText: string) => {
+  if (!reportText) return null;
+  
+  // First, clean any unwanted markdown completely
+  const cleanedText = reportText
+    .replace(/^#+\s/gm, '')     // Remove Markdown headers
+    .replace(/\*\*/g, '')       // Remove bold markup
+    .replace(/\*/g, '')         // Remove italic markup
+    .replace(/^-\s/gm, '')      // Remove list items
+    .replace(/^>\s/gm, '');     // Remove blockquotes
+  
+  // Split by double newlines to get paragraphs
+  const paragraphs = cleanedText.split(/\n\n+/);
+  
+  return (
+    <div className="space-y-2">
+      {paragraphs.map((paragraph, index) => {
+        if (!paragraph.trim()) return null;
+        
+        // Format text and apply styles
+        const formattedText = formatReportText(paragraph.trim());
+        
+        return (
+          <div 
+            key={index} 
+            className="text-gray-700 dark:text-gray-300 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: formattedText }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+// Create a reusable component for rendering report sections
+const renderReportSection = (
+  title: string, 
+  reportContent: string, 
+  fetchReportFn: () => void, 
+  description: string,
+  isLoading: boolean,
+  error: string | null
+) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
+    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+    
+    {isLoading ? (
+      <div className="flex flex-col items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500 mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Generating report, please wait...</p>
+      </div>
+    ) : error ? (
+      <div className="bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+        <p className="text-red-700 dark:text-red-400">{error}</p>
+        <button 
+          onClick={fetchReportFn}
+          className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    ) : reportContent ? (
+      <div className="prose dark:prose-invert max-w-none">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg p-6 mb-6">
+          <h4 className="text-lg font-medium text-amber-800 dark:text-amber-400 mb-2">{title} Analysis</h4>
+          <p className="text-gray-600 dark:text-gray-300">
+            {description}
+          </p>
+        </div>
+        
+        {/* Render with intelligent formatting */}
+        {renderPersonalityReport(reportContent)}
+        
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Report
+              </button>
+              
+              <button
+                onClick={() => {
+                  // Clear specific report from localStorage
+                  const reportKey = 
+                    title === 'Personality' ? 'personalityReport' :
+                    title === 'Life Overview' ? 'overviewReport' :
+                    title === 'Fortune Years' ? 'fortuneReport' :
+                    title === 'Career' ? 'careerReport' :
+                    title === 'Love and Marriage' ? 'loveReport' :
+                    title === 'Wealth' ? 'wealthReport' : '';
+                    
+                  if (reportKey) {
+                    localStorage.removeItem(reportKey);
+                    fetchReportFn(); // Regenerate report
+                  }
+                }}
+                className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Regenerate
+              </button>
+            </div>
+            
+            <button
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: `My BaZi ${title} Analysis`,
+                    text: `Check out my BaZi ${title.toLowerCase()} analysis!`,
+                    url: window.location.href,
+                  });
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Link copied to clipboard');
+                }
+              }}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Report
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="flex flex-col items-center py-8">
+        <p className="text-gray-700 dark:text-gray-300 mb-4">
+          Click the button below to generate a detailed {title.toLowerCase()} analysis report.
+        </p>
+        <button
+          onClick={fetchReportFn}
+          className="px-6 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+          </svg>
+          Generate {title} Report
+        </button>
+      </div>
+    )}
+  </div>
+);
 
 export default function BaziResults() {
   const router = useRouter();
   const [sxtwlBaziChart, setSxtwlBaziChart] = useState<SxtwlBaziChart | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabType>('basic');
+  
+  // Reports content
+  const [personalityReport, setPersonalityReport] = useState<string>('');
+  const [overviewReport, setOverviewReport] = useState<string>('');
+  const [fortuneReport, setFortuneReport] = useState<string>('');
+  const [careerReport, setCareerReport] = useState<string>('');
+  const [loveReport, setLoveReport] = useState<string>('');
+  const [wealthReport, setWealthReport] = useState<string>('');
+  
+  // Individual loading states for each report type
+  const [loadingStates, setLoadingStates] = useState({
+    personality: false,
+    overview: false,
+    fortune: false,
+    career: false,
+    love: false,
+    wealth: false
+  });
+  
+  // Error states for each report
+  const [errorStates, setErrorStates] = useState({
+    personality: null as string | null,
+    overview: null as string | null,
+    fortune: null as string | null,
+    career: null as string | null,
+    love: null as string | null,
+    wealth: null as string | null
+  });
 
   useEffect(() => {
     // Get saved results from localStorage
     const savedData = localStorage.getItem('baziResults');
     const savedUserData = localStorage.getItem('baziUserData');
+    
+    // Load all saved reports from localStorage
+    const savedPersonalityReport = localStorage.getItem('personalityReport');
+    const savedOverviewReport = localStorage.getItem('overviewReport');
+    const savedFortuneReport = localStorage.getItem('fortuneReport');
+    const savedCareerReport = localStorage.getItem('careerReport');
+    const savedLoveReport = localStorage.getItem('loveReport');
+    const savedWealthReport = localStorage.getItem('wealthReport');
+    
     if (savedData) {
       setSxtwlBaziChart(JSON.parse(savedData));
     } 
     if (savedUserData) {
       setUserData(JSON.parse(savedUserData));
     }
+    if (savedPersonalityReport) setPersonalityReport(savedPersonalityReport);
+    if (savedOverviewReport) setOverviewReport(savedOverviewReport);
+    if (savedFortuneReport) setFortuneReport(savedFortuneReport);
+    if (savedCareerReport) setCareerReport(savedCareerReport);
+    if (savedLoveReport) setLoveReport(savedLoveReport);
+    if (savedWealthReport) setWealthReport(savedWealthReport);
+    
     if (!savedData) {
       // If no results, return to calculation page
       router.push('/calculator');
     }
   }, [router]);
 
+  // Auto-fetch reports when switching tabs only if no saved data exists
+  useEffect(() => {
+    if (!sxtwlBaziChart) return;
+    
+    // Don't fetch if any report is currently loading
+    const isAnyReportLoading = Object.values(loadingStates).some(state => state);
+    if (isAnyReportLoading) return;
+    
+    // Only fetch if the report doesn't exist yet
+    switch (activeTab) {
+      case 'personality':
+        if (!personalityReport && !localStorage.getItem('personalityReport')) 
+          fetchPersonalityReport();
+        break;
+      case 'overview':
+        if (!overviewReport && !localStorage.getItem('overviewReport')) 
+          fetchOverviewReport();
+        break;
+      case 'fortune':
+        if (!fortuneReport && !localStorage.getItem('fortuneReport')) 
+          fetchFortuneReport();
+        break;
+      case 'career':
+        if (!careerReport && !localStorage.getItem('careerReport')) 
+          fetchCareerReport();
+        break;
+      case 'love':
+        if (!loveReport && !localStorage.getItem('loveReport')) 
+          fetchLoveReport();
+        break;
+      case 'wealth':
+        if (!wealthReport && !localStorage.getItem('wealthReport')) 
+          fetchWealthReport();
+        break;
+    }
+  }, [activeTab, sxtwlBaziChart, loadingStates, personalityReport, overviewReport, fortuneReport, careerReport, loveReport, wealthReport]);
+
+  // Clear saved reports when recalculating
   const handleRecalculate = () => {
+    // Clear all saved reports
+    localStorage.removeItem('personalityReport');
+    localStorage.removeItem('overviewReport');
+    localStorage.removeItem('fortuneReport');
+    localStorage.removeItem('careerReport');
+    localStorage.removeItem('loveReport');
+    localStorage.removeItem('wealthReport');
+    
     router.push('/calculator');
   };
+
+  const fetchReport = async (reportType: AnalysisType) => {
+    if (!sxtwlBaziChart) return;
+    
+    // Get the report key
+    const reportKey = reportTypeToKey(reportType);
+    
+    // Set the loading state for the specific report type
+    setLoadingStates(prev => ({
+      ...prev,
+      [reportKey]: true
+    }));
+    
+    // Clear error for this specific report
+    setErrorStates(prev => ({
+      ...prev,
+      [reportKey]: null
+    }));
+    
+    try {
+      // Convert SXTWL BaZi chart to DeepSeek API format
+      const baziChart = convertToBaziChart(sxtwlBaziChart);
+      const analysis = await doBaziAnalysis(baziChart, reportType);
+      
+      // Save to localStorage and state based on report type
+      switch (reportType) {
+        case 'overall':
+          setPersonalityReport(analysis);
+          localStorage.setItem('personalityReport', analysis);
+          break;
+        case 'age25':
+          setOverviewReport(analysis);
+          localStorage.setItem('overviewReport', analysis);
+          break;
+        case 'fortune':
+          setFortuneReport(analysis);
+          localStorage.setItem('fortuneReport', analysis);
+          break;
+        case 'career':
+          setCareerReport(analysis);
+          localStorage.setItem('careerReport', analysis);
+          break;
+        case 'marriage':
+          setLoveReport(analysis);
+          localStorage.setItem('loveReport', analysis);
+          break;
+        case 'wealth':
+          setWealthReport(analysis);
+          localStorage.setItem('wealthReport', analysis);
+          break;
+      }
+    } catch (err) {
+      console.error(`Failed to get ${reportType} analysis:`, err);
+      // Set error for this specific report
+      setErrorStates(prev => ({
+        ...prev,
+        [reportKey]: err instanceof Error ? err.message : 'Failed to get analysis'
+      }));
+    } finally {
+      // Clear the loading state for the specific report type
+      setLoadingStates(prev => ({
+        ...prev,
+        [reportKey]: false
+      }));
+    }
+  };
+
+  // Helper function to convert analysis type to loading state key
+  const reportTypeToKey = (reportType: AnalysisType): string => {
+    switch (reportType) {
+      case 'overall': return 'personality';
+      case 'age25': return 'overview';
+      case 'fortune': return 'fortune';
+      case 'career': return 'career';
+      case 'marriage': return 'love';
+      case 'wealth': return 'wealth';
+      default: return 'personality';
+    }
+  };
+
+  // Fetch personality report
+  const fetchPersonalityReport = () => fetchReport('overall');
+  
+  // Fetch life overview report
+  const fetchOverviewReport = () => fetchReport('age25');
+  
+  // Fetch fortune years report
+  const fetchFortuneReport = () => fetchReport('fortune');
+  
+  // Fetch career report
+  const fetchCareerReport = () => fetchReport('career');
+  
+  // Fetch love and marriage report
+  const fetchLoveReport = () => fetchReport('marriage');
+  
+  // Fetch wealth report
+  const fetchWealthReport = () => fetchReport('wealth');
 
   if (!sxtwlBaziChart) {
     return (
@@ -385,59 +787,59 @@ export default function BaziResults() {
               </>
             )}
             
-            {/* Content for other tabs */}
-            {activeTab === 'personality' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Personality Report</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete personality analysis.
-                </p>
-              </div>
+            {/* Content for all analysis tabs using the reusable component */}
+            {activeTab === 'personality' && renderReportSection(
+              'Personality', 
+              personalityReport, 
+              fetchPersonalityReport,
+              'Based on your BaZi chart, here is a comprehensive analysis of your personality and character traits.',
+              loadingStates.personality,
+              errorStates.personality
             )}
             
-            {activeTab === 'overview' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Life Overview</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete life overview analysis.
-                </p>
-              </div>
+            {activeTab === 'overview' && renderReportSection(
+              'Life Overview', 
+              overviewReport, 
+              fetchOverviewReport,
+              'Based on your BaZi chart, here is a comprehensive overview of your life and upcoming years.',
+              loadingStates.overview,
+              errorStates.overview
             )}
             
-            {activeTab === 'fortune' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Fortune Years</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete fortune years analysis.
-                </p>
-              </div>
+            {activeTab === 'fortune' && renderReportSection(
+              'Fortune Years', 
+              fortuneReport, 
+              fetchFortuneReport,
+              'Based on your BaZi chart, here is an analysis of significant years and their potential impact on your life.',
+              loadingStates.fortune,
+              errorStates.fortune
             )}
             
-            {activeTab === 'career' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Career</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete career analysis.
-                </p>
-              </div>
+            {activeTab === 'career' && renderReportSection(
+              'Career', 
+              careerReport, 
+              fetchCareerReport,
+              'Based on your BaZi chart, here is an analysis of your career potential, strengths, and opportunities.',
+              loadingStates.career,
+              errorStates.career
             )}
             
-            {activeTab === 'love' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Love and Marriage</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete love and marriage analysis.
-                </p>
-              </div>
+            {activeTab === 'love' && renderReportSection(
+              'Love and Marriage', 
+              loveReport, 
+              fetchLoveReport,
+              'Based on your BaZi chart, here is an analysis of your relationships, marriage prospects, and love life.',
+              loadingStates.love,
+              errorStates.love
             )}
             
-            {activeTab === 'wealth' && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Wealth</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  This content requires premium access. Please upgrade your account to view the complete wealth analysis.
-                </p>
-              </div>
+            {activeTab === 'wealth' && renderReportSection(
+              'Wealth', 
+              wealthReport, 
+              fetchWealthReport,
+              'Based on your BaZi chart, here is an analysis of your wealth potential, financial trends, and money management.',
+              loadingStates.wealth,
+              errorStates.wealth
             )}
           </div>
         </div>

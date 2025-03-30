@@ -1,25 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { signIn, useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-
-  // 如果用户已登录，重定向到主页
-  useEffect(() => {
-    if (status === 'authenticated' && session) {
-      router.push('/');
-    }
-  }, [session, status, router]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,22 +27,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-ink-light dark:bg-ink-dark py-12 relative ink-wash-bg">
-        <div className="ink-splash ink-splash-1"></div>
-        <div className="ink-splash ink-splash-2"></div>
-        <div className="ink-splash ink-splash-3"></div>
-        <div className="max-w-md w-full p-8 relative z-10">
-          <div className="text-center mb-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-earth mx-auto"></div>
-            <p className="mt-4 text-earth dark:text-earth">正在加载...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-ink-light dark:bg-ink-dark py-12 relative ink-wash-bg">

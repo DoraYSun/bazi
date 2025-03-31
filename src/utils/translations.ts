@@ -40,15 +40,15 @@ export const wuXingTranslations: TranslationDict = {
 
 export const shiShenTranslations: TranslationDict = {
   '比肩': 'Bi Jian (Peer)',
-  '劫财': 'Jie Cai (Rob Wealth)',
+  '劫财': 'Jie Cai (Competitive Peer)',
   '食神': 'Shi Shen (Food God)',
   '伤官': 'Shang Guan (Hurting Officer)',
-  '偏财': 'Pian Cai (Partial Wealth)',
-  '正财': 'Zheng Cai (Proper Wealth)',
-  '七杀': 'Qi Sha (Seven Killing)',
-  '正官': 'Zheng Guan (Proper Officer)',
-  '偏印': 'Pian Yin (Partial Seal)',
-  '正印': 'Zheng Yin (Proper Seal)',
+  '偏财': 'Pian Cai (Indirect Wealth)',
+  '正财': 'Zheng Cai (Direct Wealth)',
+  '七杀': 'Qi Sha (Challenger Star)',
+  '正官': 'Zheng Guan (Direct Officer)',
+  '偏印': 'Pian Yin (Indirect Resource)',
+  '正印': 'Zheng Yin (Direct Resource)',
   '日主': 'Ri Zhu (Day Master)'
 };
 
